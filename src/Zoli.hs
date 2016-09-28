@@ -26,6 +26,9 @@ module Zoli
     -- * Commands
   , module Zoli.Cmd
 
+    -- * File utilities
+  , module Zoli.FileUtils
+
     -- * Running
   , mkRules
   ) where
@@ -34,6 +37,7 @@ import           Zoli.Core
 import           Zoli.Pattern
 import           Zoli.Run
 import           Zoli.Cmd
+import           Zoli.FileUtils
 
 need :: (Monad m, Pattern tok) => [Need tok] -> Rule tok m [FilePath]
 need needs = do
