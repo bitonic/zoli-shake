@@ -9,6 +9,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Zoli.Pattern
   ( Pattern(..)
   , (@@)
@@ -29,6 +32,9 @@ import           Data.List.Extra (split)
 import qualified Language.Haskell.TH as TH
 import qualified Language.Haskell.TH.Quote as TH
 import           Control.Arrow (first)
+import           Data.String (IsString(..))
+import           Data.Typeable (eqT, (:~:)(..), typeRep)
+import           Data.Proxy (Proxy(..))
 
 -- |
 -- * If @'patInstantiate' pat x = s@, then @'patMatch' pat s = Just x@
@@ -82,20 +88,40 @@ data Pat_ a where
 
 deriving instance Show (Pat_ a)
 
-parseQ :: String -> TH.ExpQ
-parseQ = firstPass
+parse :: forall x. String -> (forall a. (Typeable a) => Pat_ a -> x) -> x
+parse s000 cont = case s000 of
+  [] ->
+    cont End
+  ch : ch' : chs | isPathSeparator ch && isPathSeparator ch' ->
+    parse chs (\p -> cont (Skip p))
+  ch : chs | isPathSeparator ch ->
+    parse chs (\p -> cont (Sep p))
+  s ->
+    let (beforeSep, fromSep) = break isPathSeparator s
+    in parse fromSep (\p -> parseSegment beforeSep p cont)
   where
-    firstPass = \case
-      [] ->
-        [|End|]
-      ch : ch' : chs | isPathSeparator ch && isPathSeparator ch' ->
-        [|Skip $(parseQ chs)|]
-      ch : chs | isPathSeparator ch ->
-        [|Sep $(parseQ chs)|]
-      s -> do
-        let (beforeSep, fromSep) = break isPathSeparator s
-        [| $(parseSegmentQ beforeSep (parseQ fromSep)) |]
+    parseSegment :: forall a. (Typeable a) => String -> Pat_ a -> (forall b. (Typeable b) => Pat_ b -> x) -> x
+    parseSegment s00 p0 cont0 = go (split (== '*') s00) cont0
+      where
+        go :: [String] -> (forall b. (Typeable b) => Pat_ b -> x) -> x
+        go s0 cont_ = case s0 of
+          [] -> cont_ p0
+          [s] -> cont_ (Lit s p0)
+          "" : ss -> go ss (\p -> cont_ (Star p))
+          s : ss -> go ss (\p -> cont_ (Lit s (Star p)))
 
+parseQ :: String -> TH.ExpQ
+parseQ = \case
+  [] ->
+    [|End|]
+  ch : ch' : chs | isPathSeparator ch && isPathSeparator ch' ->
+    [|Skip $(parseQ chs)|]
+  ch : chs | isPathSeparator ch ->
+    [|Sep $(parseQ chs)|]
+  s -> do
+    let (beforeSep, fromSep) = break isPathSeparator s
+    [| $(parseSegmentQ beforeSep (parseQ fromSep)) |]
+  where
     parseSegmentQ :: String -> TH.ExpQ -> TH.ExpQ
     parseSegmentQ s0 after = go (split (== '*') s0)
       where
@@ -216,3 +242,8 @@ instance Pattern Pat where
   patRender (Pat x) = patRender x
   patInstantiate (Pat p) x = patInstantiate p (unFlatten x)
   patMatch (Pat p) s = map flatten (patMatch p s)
+
+instance IsString (Pat ()) where
+  fromString s = parse s $ \(pat :: Pat_ a) -> case eqT :: Maybe (a :~: ()) of
+    Nothing -> error ("Pat fromString: requested type () is not the pattern's " ++ patRender pat ++ " type of " ++ show (typeRep (Proxy @a)))
+    Just Refl -> Pat pat
