@@ -21,8 +21,7 @@ build = do
   bin <- rule (pat1 "bin/myprog") $ \() out -> do
     let names = ["a", "b"]
     objectsFiles <- need (map (Tok objects) names)
-    () <- cmd_ "cc" (["-o", out] ++ objectsFiles)
-    return ()
+    cmd_ "cc" (["-o", out] ++ objectsFiles)
 
   want [Tok bin ()]
 
