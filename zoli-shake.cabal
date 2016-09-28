@@ -27,6 +27,9 @@ library
                      , shake
                      , process
                      , directory
+                     , extra
+                     , filepath
+                     , template-haskell
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-redundant-constraints
 

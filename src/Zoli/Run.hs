@@ -23,7 +23,7 @@ instance Pattern Token where
     PhonyToken s' -> guard (s == s')
     RuleToken pat -> patMatch pat s
 
-  patInstantiate (PhonyToken s) () = s
+  patInstantiate (PhonyToken s) () = return s
   patInstantiate (RuleToken pat) s = patInstantiate pat s
 
   patRender = \case
@@ -51,8 +51,9 @@ mkRules = goRules . unRules
             rules <- goRules (cont (RuleToken pat))
             return $ do
               patRender pat Shake.%> \out -> case patMatch pat out of
-                Nothing -> error ("Could not match filepath " ++ show out ++ " with pattern " ++ patRender pat)
-                Just n -> goRule (unRule (r n out))
+                [] -> error ("Could not match filepath " ++ show out ++ " with pattern " ++ patRender pat)
+                [n] -> goRule (unRule (r n out))
+                _ : _ -> error ("Pattern " ++ patRender pat ++ " had multiple matches with filepath " ++ show out)
               rules
           Want needs cont -> do
             rules <- goRules cont

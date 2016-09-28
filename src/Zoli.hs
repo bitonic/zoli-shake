@@ -2,6 +2,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
 module Zoli
   ( -- * Rules
     Rule
@@ -24,8 +26,11 @@ module Zoli
   , Pattern
   , (@@)
   , SimplePat
-  , pat1
-  , pat2
+  , simplePat1
+  , simplePat2
+  , Pat
+  , mkPat
+  , pt
 
     -- * Commands
   , module Zoli.Cmd
