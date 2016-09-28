@@ -19,10 +19,12 @@ library
                        Zoli.Core
                        Zoli.Pattern
                        Zoli.Run
+                       Zoli.Cmd
   build-depends:       base >= 4.7 && < 5
                      , free
                      , transformers
                      , shake
+                     , process
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-redundant-constraints
 
