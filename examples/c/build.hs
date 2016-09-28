@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 import           Control.Monad (void)
 import           Data.Functor.Identity (Identity(..))
 import           System.FilePath (takeDirectory)
@@ -10,17 +11,17 @@ build :: (Pattern tok, MonadIO m) => Rules tok m Identity ()
 build = do
   objects <- rule (pat2 "objs/" ".o") $ \name out -> do
     let source = pat2 "src/" ".c" @@ name
-    need_ [File source]
+    needFiles [source]
     let deps = pat2 "deps/" ".d" @@ name
     mkdirP (takeDirectory deps)
     () <- cmd_ "cc" ["-MD", "-MF", deps, "-c", "-o", out, source]
     -- The first string is the rule target, which we don't need.
     _ : depsFiles <- filter (\w -> w /= source && w /= "\\") . words <$> liftIO (readFile deps)
-    need_ (map File depsFiles)
+    needFiles depsFiles
 
   bin <- rule (pat1 "bin/myprog") $ \() out -> do
     let names = ["a", "b"]
-    objectsFiles <- need (map (Tok objects) names)
+    objectsFiles <- needToks (map (objects,) names)
     cmd_ "cc" (["-o", out] ++ objectsFiles)
 
   want [Tok bin ()]
