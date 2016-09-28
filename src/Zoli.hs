@@ -11,6 +11,7 @@ module Zoli
   , needFiles
   , needToks
   , traced
+  , always
 
   , OutPath
   , RuleHandler

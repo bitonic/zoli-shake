@@ -8,6 +8,7 @@ module Zoli.Core
     , Need(..)
     , need_
     , traced
+    , always
 
     , OutPath
     , RuleHandler
@@ -33,11 +34,13 @@ newtype Rule tok m a = Rule {unRule :: FreeT (RuleF tok) m a}
 data RuleF tok a
   = Need ![Need tok] a
   | forall b. Traced !String (IO b) (b -> a)
+  | Always a
 
 instance Functor (RuleF tok) where
   fmap f = \case
     Need needs x -> Need needs (f x)
     Traced s m h -> Traced s m (fmap f h)
+    Always x -> Always (f x)
 
 data Need tok
   = forall a. Tok !(tok a) !a
@@ -54,6 +57,9 @@ need_ needs = Rule (wrap (Need needs (return ())))
 
 traced :: (Monad m) => String -> IO a -> Rule tok m a
 traced s m = Rule (wrap (Traced s m return))
+
+always :: (Monad m) => Rule tok m ()
+always = Rule (wrap (Always (return ())))
 
 -- Rules
 ------------------------------------------------------------------------

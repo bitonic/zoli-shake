@@ -80,3 +80,6 @@ mkRules = goRules . unRules
           Traced s m h -> do
             x <- Shake.traced s m
             goRule (h x)
+          Always cont -> do
+            Shake.alwaysRerun
+            goRule cont
