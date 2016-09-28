@@ -28,9 +28,6 @@ module Zoli
     -- * Patterns
   , Pattern
   , (@@)
-  , SimplePat
-  , simplePat1
-  , simplePat2
   , Pat
   , mkPat
   , pt

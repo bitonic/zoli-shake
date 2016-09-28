@@ -15,9 +15,6 @@
 module Zoli.Pattern
   ( Pattern(..)
   , (@@)
-  , SimplePat
-  , simplePat1
-  , simplePat2
 
   , Pat
   , mkPat
@@ -51,35 +48,6 @@ class Pattern f where
 pat @@ x = case patInstantiate pat x of
   Left err -> error ("@@: " ++ err)
   Right y -> y
-
-data SimplePat a where
-  SimplePat1 :: String -> SimplePat ()
-  SimplePat2 :: String -> String -> SimplePat String
-  deriving (Typeable)
-
-instance Pattern SimplePat where
-  patMatch pat s = case pat of
-    SimplePat1 s' -> guard $ s == s'
-    SimplePat2 s1 s2 -> do
-      guard (s1 `isPrefixOf` s)
-      guard (reverse s2 `isPrefixOf` reverse s)
-      guard (length s >= length s1 + length s2)
-      return (dropEnd (length s2) (drop (length s1) s))
-
-  patInstantiate (SimplePat1 s) () = return s
-  patInstantiate (SimplePat2 s1 s2) s = return (s1 ++ s ++ s2)
-
-  patRender (SimplePat1 s) = s
-  patRender (SimplePat2 s1 s2) = s1 ++ "//*" ++ s2
-
-simplePat1 :: String -> SimplePat ()
-simplePat1 = SimplePat1
-
-simplePat2 :: String -> String -> SimplePat String
-simplePat2 = SimplePat2
-
-dropEnd :: Int -> String -> String
-dropEnd n = reverse . drop n . reverse
 
 data Pat_ a where
   End :: Pat_ ()
