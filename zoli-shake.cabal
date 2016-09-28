@@ -1,0 +1,44 @@
+name:                zoli-shake
+version:             0.1.0.0
+synopsis:            Initial project template from stack
+description:         Please see README.md
+homepage:            https://github.com/bitonic/zoli-shake#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Francesco Mazzoli
+maintainer:          f@mazzo.li
+copyright:           2016 Francesco Mazzoli
+category:            Web
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Zoli
+                       Zoli.Core
+                       Zoli.Pattern
+                       Zoli.Run
+  build-depends:       base >= 4.7 && < 5
+                     , free
+                     , transformers
+                     , shake
+  default-language:    Haskell2010
+  ghc-options:         -Wall -Wno-redundant-constraints
+
+executable example-c
+  hs-source-dirs:      examples/c
+  main-is:             build.hs
+  build-depends:       base
+                     , zoli-shake
+                     , shake
+                     , transformers
+                     , directory
+                     , filepath
+  ghc-options:         -Wall -Wno-redundant-constraints
+  ghc-options:         -rtsopts -threaded
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/bitonic/zoli-shake
