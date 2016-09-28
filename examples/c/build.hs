@@ -22,7 +22,7 @@ build = do
     _ : depsFiles <- filter (\w -> w /= source && w /= "\\") . words <$> liftIO (readFile deps)
     needFiles depsFiles
 
-  bin <- rule "bin/myprog" $ \() out -> do
+  bin <- rule (StrPat "bin/myprog") $ \() out -> do
     let names = ["a", "b"]
     objectsFiles <- needToks (map (objects,) (map ("/",) names))
     cmd_ "cc" (["-o", out] ++ objectsFiles)

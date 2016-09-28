@@ -22,6 +22,8 @@ module Zoli.Pattern
   , Pat
   , mkPat
   , pt
+
+  , StrPat(..)
   ) where
 
 import           Data.Typeable (Typeable)
@@ -247,3 +249,11 @@ instance IsString (Pat ()) where
   fromString s = parse s $ \(pat :: Pat_ a) -> case eqT :: Maybe (a :~: ()) of
     Nothing -> error ("Pat fromString: requested type () is not the pattern's " ++ patRender pat ++ " type of " ++ show (typeRep (Proxy @a)))
     Just Refl -> Pat pat
+
+data StrPat a where
+  StrPat :: String -> StrPat ()
+
+instance Pattern StrPat where
+  patRender (StrPat s) = s
+  patMatch (StrPat s) s' = guard (s == s')
+  patInstantiate (StrPat s) () = return s

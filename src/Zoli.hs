@@ -34,6 +34,7 @@ module Zoli
   , Pat
   , mkPat
   , pt
+  , StrPat(..)
 
     -- * Commands
   , module Zoli.Cmd
@@ -45,8 +46,7 @@ module Zoli
   , mkRules
   ) where
 
-import           Zoli.Core hiding (rule)
-import qualified Zoli.Core as Core
+import           Zoli.Core
 import           Zoli.Pattern
 import           Zoli.Run
 import           Zoli.Cmd
@@ -70,13 +70,6 @@ needToks toks = need (map (uncurry Tok) toks)
 
 needToks_ :: (Monad m, Pattern tok) => [tok ()] -> Rule tok m [FilePath]
 needToks_ toks = needToks (zip toks (repeat ()))
-
--- For now we restrict 'rule' because it lets us use 'Pat's
--- 'IsString' instance without annotations
-rule ::
-     (Monad m, Pattern tok)
-  => Pat a -> RuleHandler tok r a -> Rules tok r m (tok a)
-rule = Core.rule
 
 wantToks :: (Monad m, Pattern tok) => [(tok a, a)] -> Rules tok r m ()
 wantToks toks = want (map (uncurry Tok) toks)
