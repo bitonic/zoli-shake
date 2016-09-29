@@ -6,10 +6,11 @@ module Zoli.Run
   ( mkRules
   ) where
 
-import           Control.Monad (guard)
+import           Control.Monad (guard, forM, unless)
 import qualified Development.Shake as Shake
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Free (FreeT(..), FreeF(..))
+import           System.Directory (doesFileExist)
 
 import           Zoli.Core
 import           Zoli.Pattern
@@ -72,11 +73,14 @@ mkRules = goRules . unRules
         Pure x -> return x
         Free rf -> case rf of
           Need ns ft' -> do
-            Shake.need
-              [ case n of
-                  Tok tok x -> tok @@ x
-                  File fp -> fp
-              | n <- ns ]
+            fps <- forM ns $ \case
+              Tok tok x -> return (tok @@ x)
+              File fp -> do
+                exists <- liftIO (doesFileExist fp)
+                unless exists $
+                  fail ("goRule: needed file " ++ show fp ++ " does not exist.")
+                return fp
+            Shake.need fps
             goRule ft'
           Traced s m h -> do
             x <- Shake.traced s m
