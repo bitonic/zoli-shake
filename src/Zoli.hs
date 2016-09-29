@@ -6,7 +6,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Zoli
   ( -- * Rules
-    Rule
+    Token
+  , Action
   , Need(..)
   , need
   , need_
@@ -17,7 +18,6 @@ module Zoli
   , always
 
   , OutPath
-  , RuleHandler
   , Rules
   , rule
   , phony
@@ -40,16 +40,15 @@ module Zoli
   , module Zoli.FileUtils
 
     -- * Running
-  , mkRules
+  , runRules
   ) where
 
 import           Zoli.Core
 import           Zoli.Pattern
-import           Zoli.Run
 import           Zoli.Cmd
 import           Zoli.FileUtils
 
-need :: (Monad m, Pattern tok) => [Need tok] -> Rule tok m [FilePath]
+need :: [Need] -> Action [FilePath]
 need needs = do
   need_ needs
   return
@@ -59,17 +58,17 @@ need needs = do
     | tok <- needs
     ]
 
-needFiles :: (Monad m) => [FilePath] -> Rule tok m ()
+needFiles :: [FilePath] -> Action ()
 needFiles files = need_ (map File files)
 
-needToks :: (Monad m, Pattern tok) => [(tok a, a)] -> Rule tok m [FilePath]
+needToks :: [(Token a, a)] -> Action [FilePath]
 needToks toks = need (map (uncurry Tok) toks)
 
-needToks_ :: (Monad m, Pattern tok) => [tok ()] -> Rule tok m [FilePath]
+needToks_ :: [Token ()] -> Action [FilePath]
 needToks_ toks = needToks (zip toks (repeat ()))
 
-wantToks :: (Monad m, Pattern tok) => [(tok a, a)] -> Rules tok r m ()
+wantToks :: [(Token a, a)] -> Rules ()
 wantToks toks = want (map (uncurry Tok) toks)
 
-wantToks_ :: (Monad m, Pattern tok) => [tok ()] -> Rules tok r m ()
+wantToks_ :: [Token ()] -> Rules ()
 wantToks_ toks = wantToks (zip toks (repeat ()))

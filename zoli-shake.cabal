@@ -18,12 +18,9 @@ library
   exposed-modules:     Zoli
                        Zoli.Core
                        Zoli.Pattern
-                       Zoli.Run
                        Zoli.Cmd
                        Zoli.FileUtils
   build-depends:       base >= 4.7 && < 5
-                     , free
-                     , transformers
                      , shake
                      , process
                      , directory

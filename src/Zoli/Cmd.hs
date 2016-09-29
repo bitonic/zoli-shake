@@ -28,10 +28,10 @@ import           Data.Char (isSpace)
 
 import           Zoli.Core
 
-cmd :: (Shake.CmdResult r, Monad m) => [Shake.CmdOption] -> String -> [String] -> Rule tok m r
+cmd :: (Shake.CmdResult r) => [Shake.CmdOption] -> String -> [String] -> Action r
 cmd opts ex args = traced (intercalate " " (map showArg (ex : args))) (Shake.cmd opts ex args)
   where
     showArg arg = if any isSpace arg then show arg else arg
 
-cmd_ :: (Shake.CmdResult r, Monad m) => String -> [String] -> Rule tok m r
+cmd_ :: (Shake.CmdResult r) => String -> [String] -> Action r
 cmd_ = cmd []

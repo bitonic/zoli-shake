@@ -3,14 +3,13 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedStrings #-}
 import           Control.Monad (void)
-import           Data.Functor.Identity (Identity(..))
 import           System.FilePath (takeDirectory)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.IO.Class (liftIO)
 import qualified Development.Shake as Shake
 
 import           Zoli
 
-build :: (Pattern tok, MonadIO m) => Rules tok m Identity ()
+build :: Rules ()
 build = do
   objects <- rule [pt|objs//*.o|] $ \name out -> do
     let source = [pt|src//*.c|] @@ name
@@ -34,4 +33,4 @@ build = do
     rmDir "deps"
 
 main :: IO ()
-main = Shake.shakeArgs Shake.shakeOptions (runIdentity (mkRules build))
+main = Shake.shakeArgs Shake.shakeOptions (runRules build)

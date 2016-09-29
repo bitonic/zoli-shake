@@ -2,64 +2,73 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE GADTs #-}
 module Zoli.Core
-    ( Rule(..)
-    , RuleF(..)
+    ( Token
+    , Action
     , Need(..)
     , need_
     , traced
     , always
 
     , OutPath
-    , RuleHandler
-    , Rules(..)
-    , RulesF(..)
+    , Rules
+    , runRules
     , rule
     , phony
     , want
     ) where
 
 import           Control.Monad.IO.Class (MonadIO(..))
-import           Control.Monad.Trans.Class (MonadTrans)
-import           Control.Monad.Trans.Free (FreeT, wrap)
+import qualified Development.Shake as Shake
+import           System.Directory (doesFileExist)
+import           Control.Monad (guard, unless)
 
 import           Zoli.Pattern
 
--- Rule
+-- Action
 ------------------------------------------------------------------------
 
-newtype Rule tok m a = Rule {unRule :: FreeT (RuleF tok) m a}
-  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans)
+data Token a where
+  RuleToken :: (Pattern f) => f a -> Token a
+  PhonyToken :: String -> Token ()
 
-data RuleF tok a
-  = Need ![Need tok] a
-  | forall b. Traced !String (IO b) (b -> a)
-  | Always a
+instance Pattern Token where
+  patMatch t s = case t of
+    PhonyToken s' -> guard (s == s')
+    RuleToken pat -> patMatch pat s
 
-instance Functor (RuleF tok) where
-  fmap f = \case
-    Need needs x -> Need needs (f x)
-    Traced s m h -> Traced s m (fmap f h)
-    Always x -> Always (f x)
+  patInstantiate (PhonyToken s) () = return s
+  patInstantiate (RuleToken pat) s = patInstantiate pat s
 
-data Need tok
-  = forall a. Tok !(tok a) !a
-  | File !FilePath
-  -- | Refer to an existing file.
-  --
-  -- IMPORTANT: The intended use for 'File' is only for which which
-  -- exist *before* the build process starts.  Every file created as part
-  -- of the build process should be referred to using 'Token's returned by
-  -- 'rule'.
+  patRender = \case
+    PhonyToken s -> s
+    RuleToken pat -> patRender pat
 
-need_ :: (Monad m) => [Need tok] -> Rule tok m ()
-need_ needs = Rule (wrap (Need needs (return ())))
+data Need
+  = File !FilePath
+  | forall a. Tok (Token a) a
 
-traced :: (Monad m) => String -> IO a -> Rule tok m a
-traced s m = Rule (wrap (Traced s m return))
+newtype Action a = Action {unAction :: Shake.Action a}
+  deriving (Functor, Applicative, Monad, MonadIO)
 
-always :: (Monad m) => Rule tok m ()
-always = Rule (wrap (Always (return ())))
+needToFilePath :: (MonadIO m) => Need -> m FilePath
+needToFilePath = \case
+  Tok tok x -> return (tok @@ x)
+  File fp -> do
+    exists <- liftIO (doesFileExist fp)
+    unless exists $
+      fail ("Needed file " ++ show fp ++ " does not exist.")
+    return fp
+
+need_ :: [Need] -> Action ()
+need_ needs = Action (Shake.need =<< mapM needToFilePath needs)
+
+traced :: String -> IO a -> Action a
+traced s m = Action (Shake.traced s m)
+
+always :: Action ()
+always = Action Shake.alwaysRerun
 
 -- Rules
 ------------------------------------------------------------------------
@@ -68,29 +77,27 @@ always = Rule (wrap (Always (return ())))
 -- be copied to the 'TargetFile'.
 type OutPath = FilePath
 
-type RuleHandler tok r a = a -> OutPath -> Rule tok r ()
-
-newtype Rules tok (r :: * -> *) m a = Rules {unRules :: FreeT (RulesF tok r) m a}
+newtype Rules a = Rules {unRules :: Shake.Rules a}
   deriving (Functor, Applicative, Monad, MonadIO)
 
-data RulesF tok r a
-  = Phony !String (Rule tok r ()) (tok () -> a)
-  | forall f p. (Pattern f) => AddRule !(f p) (RuleHandler tok r p) (tok p -> a)
-  | Want ![Need tok] a
-
-instance Functor (RulesF tok r) where
-  fmap f (Phony s r h) = Phony s r (fmap f h)
-  fmap f (AddRule pat rh h) = AddRule pat rh (fmap f h)
-  fmap f (Want n h) = Want n (f h)
+runRules :: Rules a -> Shake.Rules a
+runRules = unRules
 
 -- | Add a given rule to the build process.
 rule ::
-     (Monad m, Pattern tok, Pattern f)
-  => f a -> RuleHandler tok r a -> Rules tok r m (tok a)
-rule pat rh = Rules (wrap (AddRule pat rh return))
+     (Pattern f)
+  => f a -> (a -> OutPath -> Action ()) -> Rules (Token a)
+rule pat rh = Rules $ do
+  patRender pat Shake.%> \out -> case patMatch pat out of
+    [] -> fail ("Could not match filepath " ++ show out ++ " with pattern " ++ patRender pat)
+    [n] -> unAction (rh n out)
+    _ : _ -> fail ("Pattern " ++ patRender pat ++ " had multiple matches with filepath " ++ show out)
+  return (RuleToken pat)
 
-phony :: (Monad m, Pattern tok) => String -> Rule tok r () -> Rules tok r m (tok ())
-phony s h = Rules (wrap (Phony s h return))
+phony :: String -> Action () -> Rules (Token ())
+phony s h = Rules $ do
+  Shake.phony s (unAction h)
+  return (PhonyToken s)
 
-want :: (Monad m, Pattern tok) => [Need tok] -> Rules tok r m ()
-want needs = Rules (wrap (Want needs (return ())))
+want :: [Need] -> Rules ()
+want needs = Rules (Shake.want =<< mapM needToFilePath needs)

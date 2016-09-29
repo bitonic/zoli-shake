@@ -7,8 +7,8 @@ import           System.Directory (createDirectoryIfMissing, removeDirectoryRecu
 
 import           Zoli.Core
 
-mkdirP :: (Monad m) => FilePath -> Rule tok m ()
+mkdirP :: FilePath -> Action ()
 mkdirP fp = traced ("Creating directory " ++ show fp) (createDirectoryIfMissing True fp)
 
-rmDir :: (Monad m) => FilePath -> Rule tok m ()
+rmDir :: FilePath -> Action ()
 rmDir fp = traced ("Removing directory " ++ show fp) (removeDirectoryRecursive fp)
