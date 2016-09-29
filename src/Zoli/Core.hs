@@ -10,6 +10,7 @@ module Zoli.Core
     , need_
     , traced
     , always
+    , withResource
 
     , OutPath
     , Rules
@@ -17,6 +18,10 @@ module Zoli.Core
     , rule
     , phony
     , want
+
+    , Shake.Resource
+    , newResource
+    , withResource
     ) where
 
 import           Control.Monad.IO.Class (MonadIO(..))
@@ -70,6 +75,9 @@ traced s m = Action (Shake.traced s m)
 always :: Action ()
 always = Action Shake.alwaysRerun
 
+withResource :: Shake.Resource -> Int -> Action a -> Action a
+withResource r n m = Action (Shake.withResource r n (unAction m))
+
 -- Rules
 ------------------------------------------------------------------------
 
@@ -101,3 +109,6 @@ phony s h = Rules $ do
 
 want :: [Need] -> Rules ()
 want needs = Rules (Shake.want =<< mapM needToFilePath needs)
+
+newResource :: String -> Int -> Rules Shake.Resource
+newResource s n = Rules (Shake.newResource s n)

@@ -25,6 +25,10 @@ module Zoli
   , wantToks
   , wantToks_
 
+  , Resource
+  , newResource
+  , withResource
+
     -- * Patterns
   , Pattern
   , (@@)
